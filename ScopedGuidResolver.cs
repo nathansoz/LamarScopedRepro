@@ -1,15 +1,15 @@
 using System;
 
-public interface IScopedGuidResolver
+public interface ITransientGuidResolver
 {
     Guid GetGuid();
 }
 
-public class ScopedGuidResolver : IScopedGuidResolver
+public class TransientGuidResolver : ITransientGuidResolver
 {
     private readonly ITransientGuidProvider _guidProvider;
 
-    public ScopedGuidResolver(ITransientGuidProvider guidProvider)
+    public TransientGuidResolver(ITransientGuidProvider guidProvider)
     {
         _guidProvider = guidProvider;
     }

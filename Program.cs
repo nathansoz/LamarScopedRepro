@@ -12,27 +12,42 @@ namespace ScopedPoc
     {
         static void Main(string[] args)
         {
+            var serviceProvider = new ServiceCollection()
+                .AddScoped<IScopedGuidProvider, ScopedGuidProvider>()
+                .AddTransient<ITransientGuidResolver, TransientGuidResolver>()
+                .AddTransient<ITransientGuidProvider, TransientGuidProvider>().BuildServiceProvider();
+
+            Console.WriteLine("!!!!! RUNNING WITH DOTNET BASIC DI !!!!!");
+
+            Run(serviceProvider);
+
+            Console.WriteLine("!!!!! RUNNING WITH LAMAR !!!!!");
             var container = new Container(x =>
             {
                 // Using StructureMap style registrations
                 x.For<IScopedGuidProvider>().Use<ScopedGuidProvider>().Scoped();
-                x.For<IScopedGuidResolver>().Use<ScopedGuidResolver>().Scoped();
+                x.For<ITransientGuidResolver>().Use<TransientGuidResolver>();
                 x.For<ITransientGuidProvider>().Use<TransientGuidProvider>();
             });
 
-            Console.WriteLine("Using 100 degrees of parallelism and generating 1000000 guids");
+            Run(container.ServiceProvider);
+        }
+
+        static void Run(IServiceProvider provider, int degreesOfParallelism = 100, int guidsToGenerate = 1000000)
+        {
+            Console.WriteLine($"Using {degreesOfParallelism} degrees of parallelism and generating {guidsToGenerate} guids");
 
             ConcurrentQueue<Guid> produce = new ConcurrentQueue<Guid>();
 
             var parallelOptions = new ParallelOptions();
-            parallelOptions.MaxDegreeOfParallelism = 100;
+            parallelOptions.MaxDegreeOfParallelism = degreesOfParallelism;
 
-            Parallel.For(0, 1000000, parallelOptions, (iteration) =>
+            Parallel.For(0, guidsToGenerate, parallelOptions, (iteration) =>
             {
                 //produce.Enqueue(container.GetService<ScopedGuidResolver>().GetGuid());
-                using (var scope = container.ServiceProvider.CreateScope())
+                using (var scope = provider.CreateScope())
                 {
-                    produce.Enqueue(scope.ServiceProvider.GetService<ScopedGuidResolver>().GetGuid());
+                    produce.Enqueue(scope.ServiceProvider.GetService<ITransientGuidResolver>().GetGuid());
                 }
             });
 
